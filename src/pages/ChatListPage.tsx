@@ -10,12 +10,18 @@ export default function ChatListPage() {
   const [newTitle, setNewTitle] = useState('');
   const [newAuthor, setNewAuthor] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [creating, setCreating] = useState(false);
 
   useEffect(() => {
-    setChats(getAllChats());
+    setLoading(true);
+    getAllChats()
+      .then(setChats)
+      .catch(() => setChats([]))
+      .finally(() => setLoading(false));
   }, []);
 
-  function handleCreateChat() {
+  async function handleCreateChat() {
     if (!newTitle.trim()) {
       setError('Please enter a chat title.');
       return;
@@ -25,12 +31,19 @@ export default function ChatListPage() {
       return;
     }
 
-    const chat = createChat(newTitle.trim(), newAuthor.trim());
-    setChats([chat, ...chats]);
-    setShowNewChat(false);
-    setNewTitle('');
-    setNewAuthor('');
-    setError('');
+    setCreating(true);
+    try {
+      const chat = await createChat(newTitle.trim(), newAuthor.trim());
+      setChats([chat, ...chats]);
+      setShowNewChat(false);
+      setNewTitle('');
+      setNewAuthor('');
+      setError('');
+    } catch {
+      setError('Failed to create chat. Please try again.');
+    } finally {
+      setCreating(false);
+    }
   }
 
   function formatDate(dateStr: string): string {
@@ -88,9 +101,17 @@ export default function ChatListPage() {
             <div className="flex gap-2">
               <button
                 onClick={handleCreateChat}
-                className="px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                disabled={creating}
+                className="px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
-                Create Chat
+                {creating ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  'Create Chat'
+                )}
               </button>
               <button
                 onClick={() => {
@@ -111,7 +132,12 @@ export default function ChatListPage() {
       )}
 
       {/* Chat List */}
-      {chats.length === 0 ? (
+      {loading ? (
+        <div className="text-center py-16">
+          <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-gray-500 text-sm">Loading chats...</p>
+        </div>
+      ) : chats.length === 0 ? (
         <div className="text-center py-16">
           <MessageSquare size={48} className="mx-auto text-gray-300 mb-4" />
           <p className="text-gray-500 font-medium">No conversations yet</p>
@@ -120,11 +146,12 @@ export default function ChatListPage() {
       ) : (
         <div className="space-y-3">
           {chats.map((chat) => {
-            const isOwner = isAuthor(chat.id);
+            const chatId = chat.id;
+            const isOwner = isAuthor(chatId);
             return (
               <Link
-                key={chat.id}
-                to={`/chats/${chat.id}`}
+                key={chatId}
+                to={`/chats/${chatId}`}
                 className="block bg-white border border-gray-200 rounded-xl p-5 hover:shadow-md hover:border-gray-300 transition-all"
               >
                 <div className="flex items-start justify-between">
@@ -148,7 +175,7 @@ export default function ChatListPage() {
                       </span>
                       <span className="flex items-center gap-1">
                         <MessageCircle size={12} />
-                        {chat.messages.length} message{chat.messages.length !== 1 ? 's' : ''}
+                        {(chat.messages?.length ?? chat.messageCount ?? 0)} message{(chat.messages?.length ?? chat.messageCount ?? 0) !== 1 ? 's' : ''}
                       </span>
                       <span className="flex items-center gap-1">
                         <Globe size={12} />

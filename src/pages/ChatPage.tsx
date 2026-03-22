@@ -13,11 +13,20 @@ export default function ChatPage() {
   const [isOwner, setIsOwner] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  const [loading, setLoading] = useState(true);
+
   useEffect(() => {
     if (chatId) {
-      const loaded = getChatById(chatId);
-      setChat(loaded ?? null);
-      setIsOwner(isAuthor(chatId));
+      setLoading(true);
+      getChatById(chatId)
+        .then((loaded) => {
+          setChat(loaded ?? null);
+          if (loaded) {
+            setIsOwner(isAuthor(chatId, loaded.authorToken));
+          }
+        })
+        .catch(() => setChat(null))
+        .finally(() => setLoading(false));
     }
   }, [chatId]);
 
@@ -49,9 +58,7 @@ export default function ChatPage() {
     if (assistantMsg) {
       setChat((prev) => {
         if (!prev) return prev;
-        // Replace temp user message with the stored version and add assistant response
-        const updated = getChatById(chatId);
-        return updated ?? prev;
+        return { ...prev, messages: [...prev.messages, assistantMsg] };
       });
     }
 
@@ -70,6 +77,17 @@ export default function ChatPage() {
       hour: '2-digit',
       minute: '2-digit',
     });
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-[calc(100vh-73px)] flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-gray-500 text-sm">Loading chat...</p>
+        </div>
+      </div>
+    );
   }
 
   if (!chat) {

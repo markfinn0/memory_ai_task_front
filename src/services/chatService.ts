@@ -1,106 +1,72 @@
-import { v4 as uuidv4 } from 'uuid';
 import Cookies from 'js-cookie';
 import { ChatSession, ChatMessage } from '../types';
-import { MOCK_CHAT_SESSIONS, getMockAIResponse } from './mockData';
+import { apiCall } from './api';
 
-const STORAGE_KEY = 'memory_ai_chats';
 const COOKIE_PREFIX = 'memory_ai_chat_';
 
-function getStoredChats(): ChatSession[] {
+interface GetChatsResponse {
+  chats: ChatSession[];
+  count: number;
+}
+
+interface GetChatResponse {
+  chat: ChatSession;
+}
+
+interface CreateChatResponse {
+  message: string;
+  chat: ChatSession;
+}
+
+interface SendMessageResponse {
+  userMessage: ChatMessage;
+  aiMessage: ChatMessage;
+}
+
+export async function getAllChats(): Promise<ChatSession[]> {
+  const result = await apiCall<GetChatsResponse>('get_chats');
+  return result.chats;
+}
+
+export async function getChatById(id: string): Promise<ChatSession | undefined> {
   try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      return JSON.parse(stored) as ChatSession[];
-    }
+    const result = await apiCall<GetChatResponse>('get_chat', { chatId: id });
+    return result.chat;
   } catch {
-    // If parsing fails, start fresh
+    return undefined;
   }
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(MOCK_CHAT_SESSIONS));
-  return [...MOCK_CHAT_SESSIONS];
 }
 
-function saveChats(chats: ChatSession[]): void {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(chats));
-}
-
-export function getAllChats(): ChatSession[] {
-  return getStoredChats();
-}
-
-export function getChatById(id: string): ChatSession | undefined {
-  const chats = getStoredChats();
-  return chats.find((c) => c.id === id);
-}
-
-export function isAuthor(chatId: string): boolean {
+export function isAuthor(chatId: string, authorToken?: string): boolean {
   const token = Cookies.get(`${COOKIE_PREFIX}${chatId}`);
-  const chat = getChatById(chatId);
-  return !!token && !!chat && chat.authorToken === token;
+  if (!token) return false;
+  if (authorToken) return token === authorToken;
+  return !!token;
 }
 
-export function createChat(title: string, createdBy: string): ChatSession {
-  const chatId = uuidv4();
-  const authorToken = uuidv4();
+export function getAuthorToken(chatId: string): string | undefined {
+  return Cookies.get(`${COOKIE_PREFIX}${chatId}`);
+}
 
-  const newChat: ChatSession = {
-    id: chatId,
-    title,
-    createdAt: new Date().toISOString(),
-    createdBy,
-    authorToken,
-    messages: [],
-    isPublic: true,
-  };
+export async function createChat(title: string, createdBy: string): Promise<ChatSession> {
+  const result = await apiCall<CreateChatResponse>('create_chat', { title, createdBy });
+  const chat = result.chat;
 
   // Save the author token in a cookie
-  Cookies.set(`${COOKIE_PREFIX}${chatId}`, authorToken, { expires: 30 });
+  Cookies.set(`${COOKIE_PREFIX}${chat.id}`, chat.authorToken, { expires: 30 });
 
-  const chats = getStoredChats();
-  chats.unshift(newChat);
-  saveChats(chats);
-
-  return newChat;
+  return chat;
 }
 
 export async function sendMessage(chatId: string, content: string): Promise<ChatMessage | null> {
-  if (!isAuthor(chatId)) {
-    return null;
-  }
+  const authorToken = getAuthorToken(chatId);
+  if (!authorToken) return null;
 
-  const chats = getStoredChats();
-  const chatIndex = chats.findIndex((c) => c.id === chatId);
-  if (chatIndex === -1) return null;
+  const result = await apiCall<SendMessageResponse>('send_message', {
+    chatId,
+    message: content,
+    authorToken,
+  });
 
-  const userMessage: ChatMessage = {
-    id: uuidv4(),
-    role: 'user',
-    content,
-    timestamp: new Date().toISOString(),
-  };
-
-  chats[chatIndex].messages.push(userMessage);
-  saveChats(chats);
-
-  // Simulate AI response delay
-  await new Promise((resolve) => setTimeout(resolve, 1000 + Math.random() * 1000));
-
-  const aiResponse = getMockAIResponse(content);
-
-  const assistantMessage: ChatMessage = {
-    id: uuidv4(),
-    role: 'assistant',
-    content: aiResponse.content,
-    timestamp: new Date().toISOString(),
-    source: aiResponse.source,
-  };
-
-  // Re-read chats in case of concurrent updates
-  const updatedChats = getStoredChats();
-  const updatedIndex = updatedChats.findIndex((c) => c.id === chatId);
-  if (updatedIndex !== -1) {
-    updatedChats[updatedIndex].messages.push(assistantMessage);
-    saveChats(updatedChats);
-  }
-
-  return assistantMessage;
+  return result.aiMessage;
 }
