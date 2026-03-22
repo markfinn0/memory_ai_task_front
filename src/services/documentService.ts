@@ -97,3 +97,12 @@ export async function searchDocuments(query: string): Promise<DocumentRecord[]> 
   const result = await apiCall<GetDocumentsResponse>('search_documents', { query });
   return result.documents;
 }
+
+interface DeleteResponse {
+  message: string;
+  documentId: string;
+}
+
+export async function deleteDocument(id: string, password: string): Promise<void> {
+  await apiCall<DeleteResponse>('delete_document', { documentId: id, password });
+}

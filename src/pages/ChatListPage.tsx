@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { MessageSquare, Plus, User, Calendar, Lock, Globe, MessageCircle } from 'lucide-react';
+import { MessageSquare, Plus, User, Calendar, Lock, Globe, MessageCircle, Trash2 } from 'lucide-react';
 import { ChatSession } from '../types';
-import { getAllChats, createChat, isAuthor } from '../services/chatService';
+import { getAllChats, createChat, isAuthor, deleteChat } from '../services/chatService';
 
 export default function ChatListPage() {
   const [chats, setChats] = useState<ChatSession[]>([]);
@@ -12,6 +12,10 @@ export default function ChatListPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+  const [deletePassword, setDeletePassword] = useState('');
+  const [deleteError, setDeleteError] = useState('');
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -43,6 +47,22 @@ export default function ChatListPage() {
       setError('Failed to create chat. Please try again.');
     } finally {
       setCreating(false);
+    }
+  }
+
+  async function handleDeleteChat() {
+    if (!deleteTarget || !deletePassword.trim()) return;
+    setDeleting(true);
+    setDeleteError('');
+    try {
+      await deleteChat(deleteTarget, deletePassword.trim());
+      setChats((prev) => prev.filter((c) => c.id !== deleteTarget));
+      setDeleteTarget(null);
+      setDeletePassword('');
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : 'Failed to delete chat');
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -183,10 +203,74 @@ export default function ChatListPage() {
                       </span>
                     </div>
                   </div>
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setDeleteTarget(chatId);
+                      setDeleteError('');
+                      setDeletePassword('');
+                    }}
+                    className="ml-3 p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors shrink-0"
+                    title="Delete chat"
+                  >
+                    <Trash2 size={16} />
+                  </button>
                 </div>
               </Link>
             );
           })}
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteTarget && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 w-full max-w-md mx-4 shadow-xl">
+            <h3 className="font-semibold text-gray-900 mb-2">Delete Chat</h3>
+            <p className="text-sm text-gray-500 mb-4">
+              Enter the admin password to delete this chat. This action cannot be undone.
+            </p>
+            {deleteError && (
+              <div className="mb-3 p-2.5 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg">
+                {deleteError}
+              </div>
+            )}
+            <input
+              type="password"
+              value={deletePassword}
+              onChange={(e) => setDeletePassword(e.target.value)}
+              placeholder="Admin password"
+              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all mb-4"
+              onKeyDown={(e) => e.key === 'Enter' && handleDeleteChat()}
+            />
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={() => {
+                  setDeleteTarget(null);
+                  setDeletePassword('');
+                  setDeleteError('');
+                }}
+                className="px-4 py-2 text-sm font-medium text-gray-600 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteChat}
+                disabled={deleting || !deletePassword.trim()}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {deleting ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  'Delete'
+                )}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

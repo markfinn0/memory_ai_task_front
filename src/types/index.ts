@@ -15,6 +15,8 @@ export interface DocumentRecord {
   metadata: DocumentMetadata;
   content: string;
   fileDataUrl?: string;
+  fileUrl?: string;
+  s3Key?: string;
   embedding: EmbeddingInfo;
 }
 

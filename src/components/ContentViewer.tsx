@@ -177,6 +177,9 @@ export default function ContentViewer({ document: doc }: ContentViewerProps) {
       case '.csv':
         return <CsvTableView content={doc.content} />;
       case '.pdf':
+        if (doc.fileUrl) {
+          return <PdfViewer dataUrl={doc.fileUrl} />;
+        }
         if (doc.fileDataUrl) {
           return <PdfViewer dataUrl={doc.fileDataUrl} />;
         }
