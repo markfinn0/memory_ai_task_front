@@ -29,17 +29,11 @@ function extractFileContent(file: File): Promise<string> {
   });
 }
 
-function readFileAsDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      resolve(e.target?.result as string);
-    };
-    reader.onerror = () => {
-      reject(new Error('Failed to read file as data URL'));
-    };
-    reader.readAsDataURL(file);
-  });
+interface UploadUrlResponse {
+  uploadUrl: string;
+  s3Key: string;
+  docId: string;
+  contentType: string;
 }
 
 interface UploadResponse {
@@ -49,13 +43,27 @@ interface UploadResponse {
 
 export async function uploadDocument(
   file: File,
-  metadata: Omit<DocumentMetadata, 'id' | 'fileType' | 'fileSize' | 'uploadedAt'>
+  metadata: Omit<DocumentMetadata, 'id' | 'fileType' | 'fileSize' | 'uploadedAt'> & { deletePassword?: string }
 ): Promise<DocumentRecord> {
   const content = await extractFileContent(file);
-  const fileDataUrl = await readFileAsDataUrl(file);
   const extension = '.' + file.name.split('.').pop()?.toLowerCase();
 
-  const result = await apiCall<UploadResponse>('upload_document', {
+  // Step 1: Get a presigned S3 upload URL from the backend
+  const uploadInfo = await apiCall<UploadUrlResponse>('get_upload_url', {
+    fileType: extension,
+  });
+
+  // Step 2: Upload the file directly to S3 using the presigned URL
+  await fetch(uploadInfo.uploadUrl, {
+    method: 'PUT',
+    headers: { 'Content-Type': uploadInfo.contentType },
+    body: file,
+  });
+
+  // Step 3: Create the document record in DynamoDB (with S3 reference)
+  const docData: Record<string, unknown> = {
+    docId: uploadInfo.docId,
+    s3Key: uploadInfo.s3Key,
     fileName: metadata.fileName,
     fileType: extension,
     fileSize: file.size,
@@ -64,9 +72,13 @@ export async function uploadDocument(
     tags: metadata.tags,
     uploadedBy: metadata.uploadedBy,
     content,
-    fileDataUrl,
-  });
+  };
 
+  if (metadata.deletePassword) {
+    docData.deletePassword = metadata.deletePassword;
+  }
+
+  const result = await apiCall<UploadResponse>('upload_document', docData);
   return result.document;
 }
 

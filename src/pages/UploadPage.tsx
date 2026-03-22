@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Upload, X, FileText, CheckCircle } from 'lucide-react';
+import { Upload, X, FileText, CheckCircle, Lock } from 'lucide-react';
 import StepIndicator from '../components/StepIndicator';
 import InfoTooltip from '../components/InfoTooltip';
 import { validateFileType } from '../services/documentService';
@@ -23,6 +23,7 @@ export default function UploadPage() {
   const [context, setContext] = useState('');
   const [tags, setTags] = useState('');
   const [uploadedBy, setUploadedBy] = useState('');
+  const [deletePassword, setDeletePassword] = useState('');
 
   function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -88,6 +89,7 @@ export default function UploadPage() {
         context: context.trim(),
         tags: tags.split(',').map((t) => t.trim()).filter(Boolean),
         uploadedBy: uploadedBy.trim(),
+        deletePassword: deletePassword.trim() || undefined,
       });
       setUploadSuccess(true);
     } catch {
@@ -127,6 +129,7 @@ export default function UploadPage() {
                 setContext('');
                 setTags('');
                 setUploadedBy('');
+                setDeletePassword('');
                 if (fileInputRef.current) fileInputRef.current.value = '';
               }}
               className="px-6 py-3 bg-white text-gray-700 font-medium rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors"
@@ -282,6 +285,25 @@ export default function UploadPage() {
                 value={uploadedBy}
                 onChange={(e) => setUploadedBy(e.target.value)}
                 placeholder="Enter your username"
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+              />
+            </div>
+
+            {/* Delete Password (Optional) */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                <span className="flex items-center gap-1">
+                  <Lock size={14} />
+                  Delete Password
+                  <span className="text-gray-400 font-normal">(optional)</span>
+                  <InfoTooltip text="Set a password to protect this document from deletion. If left empty, a default admin password will be used." />
+                </span>
+              </label>
+              <input
+                type="password"
+                value={deletePassword}
+                onChange={(e) => setDeletePassword(e.target.value)}
+                placeholder="Set a password to protect deletion"
                 className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
               />
             </div>
