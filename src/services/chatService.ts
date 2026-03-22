@@ -30,7 +30,7 @@ export async function getAllChats(): Promise<ChatSession[]> {
 
 export async function getChatById(id: string): Promise<ChatSession | undefined> {
   try {
-    const result = await apiCall<GetChatResponse>('get_chat', { chatId: id });
+    const result = await apiCall<GetChatResponse>('get_chat', { chatid: id });
     return result.chat;
   } catch {
     return undefined;
@@ -63,7 +63,7 @@ export async function sendMessage(chatId: string, content: string): Promise<Chat
   if (!authorToken) return null;
 
   const result = await apiCall<SendMessageResponse>('send_message', {
-    chatId,
+    chatid: chatId,
     message: content,
     authorToken,
   });
@@ -77,7 +77,7 @@ interface DeleteChatResponse {
 }
 
 export async function deleteChat(chatId: string, password: string): Promise<void> {
-  await apiCall<DeleteChatResponse>('delete_chat', { chatId, password });
+  await apiCall<DeleteChatResponse>('delete_chat', { chatid: chatId, password });
   // Remove the author cookie for this chat
   Cookies.remove(`${COOKIE_PREFIX}${chatId}`);
 }
