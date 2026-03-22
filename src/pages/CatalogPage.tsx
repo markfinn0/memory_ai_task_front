@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Search, FileText, User, Calendar, Tag, ChevronDown, ChevronUp, Hash } from 'lucide-react';
+import { Search, FileText, User, Calendar, Tag, ChevronDown, ChevronUp, Hash, Trash2 } from 'lucide-react';
 import { DocumentRecord } from '../types';
-import { getAllDocuments, searchDocuments } from '../services/documentService';
+import { getAllDocuments, searchDocuments, deleteDocument } from '../services/documentService';
 import ContentViewer from '../components/ContentViewer';
 
 export default function CatalogPage() {
@@ -9,6 +9,10 @@ export default function CatalogPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+  const [deletePassword, setDeletePassword] = useState('');
+  const [deleteError, setDeleteError] = useState('');
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -38,6 +42,22 @@ export default function CatalogPage() {
     if (bytes < 1024) return bytes + ' B';
     if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
     return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  }
+
+  async function handleDelete() {
+    if (!deleteTarget || !deletePassword.trim()) return;
+    setDeleting(true);
+    setDeleteError('');
+    try {
+      await deleteDocument(deleteTarget, deletePassword.trim());
+      setDocuments((prev) => prev.filter((d) => d.id !== deleteTarget));
+      setDeleteTarget(null);
+      setDeletePassword('');
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : 'Failed to delete document');
+    } finally {
+      setDeleting(false);
+    }
   }
 
   function formatDate(dateStr: string): string {
@@ -190,9 +210,23 @@ export default function CatalogPage() {
 
                     {/* Metadata Section */}
                     <div className="p-5 bg-gray-50 border-t border-gray-100">
-                      <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
-                        Full Metadata
-                      </h4>
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                          Full Metadata
+                        </h4>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDeleteTarget(doc.id);
+                            setDeleteError('');
+                            setDeletePassword('');
+                          }}
+                          className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition-colors border border-red-200"
+                        >
+                          <Trash2 size={12} />
+                          Delete
+                        </button>
+                      </div>
                       <div className="grid grid-cols-2 gap-3 text-sm">
                         <div>
                           <span className="text-gray-400">ID:</span>{' '}
@@ -217,6 +251,57 @@ export default function CatalogPage() {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteTarget && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 w-full max-w-md mx-4 shadow-xl">
+            <h3 className="font-semibold text-gray-900 mb-2">Delete Document</h3>
+            <p className="text-sm text-gray-500 mb-4">
+              Enter the admin password to delete this document. This action cannot be undone.
+            </p>
+            {deleteError && (
+              <div className="mb-3 p-2.5 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg">
+                {deleteError}
+              </div>
+            )}
+            <input
+              type="password"
+              value={deletePassword}
+              onChange={(e) => setDeletePassword(e.target.value)}
+              placeholder="Admin password"
+              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all mb-4"
+              onKeyDown={(e) => e.key === 'Enter' && handleDelete()}
+            />
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={() => {
+                  setDeleteTarget(null);
+                  setDeletePassword('');
+                  setDeleteError('');
+                }}
+                className="px-4 py-2 text-sm font-medium text-gray-600 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={deleting || !deletePassword.trim()}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {deleting ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  'Delete'
+                )}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

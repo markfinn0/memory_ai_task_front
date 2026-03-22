@@ -70,3 +70,14 @@ export async function sendMessage(chatId: string, content: string): Promise<Chat
 
   return result.aiMessage;
 }
+
+interface DeleteChatResponse {
+  message: string;
+  chatId: string;
+}
+
+export async function deleteChat(chatId: string, password: string): Promise<void> {
+  await apiCall<DeleteChatResponse>('delete_chat', { chatId, password });
+  // Remove the author cookie for this chat
+  Cookies.remove(`${COOKIE_PREFIX}${chatId}`);
+}
