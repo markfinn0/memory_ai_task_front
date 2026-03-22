@@ -67,6 +67,28 @@ export const MOCK_DOCUMENTS: DocumentRecord[] = [
       createdAt: '2025-10-20T09:16:00Z',
     },
   },
+  {
+    id: 'doc-004',
+    metadata: {
+      id: 'doc-004',
+      fileName: 'model_config.json',
+      fileType: '.json',
+      fileSize: 8192,
+      author: 'Pedro Lima',
+      context: 'Configuration file for the AI model parameters used in production including temperature, top-k, and embedding settings.',
+      tags: ['config', 'model', 'ai'],
+      uploadedAt: '2025-11-10T16:45:00Z',
+      uploadedBy: 'pedro.lima',
+    },
+    content: '{"model":"gpt-4-turbo","temperature":0.7,"top_k":50,"max_tokens":2048,"embedding":{"model":"text-embedding-ada-002","dimensions":1536,"batch_size":100},"memory":{"type":"vector_store","provider":"pinecone","index":"memory-ai-prod","namespace":"default"},"rate_limits":{"requests_per_minute":100,"tokens_per_minute":40000}}',
+    embedding: {
+      model: 'text-embedding-ada-002',
+      dimensions: 1536,
+      vector: Array.from({ length: 10 }, () => Math.random() * 2 - 1),
+      tokenCount: 98,
+      createdAt: '2025-11-10T16:46:00Z',
+    },
+  },
 ];
 
 export const MOCK_CHAT_SESSIONS: ChatSession[] = [

@@ -59,11 +59,25 @@ function extractFileContent(file: File): Promise<string> {
   });
 }
 
+function readFileAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      resolve(e.target?.result as string);
+    };
+    reader.onerror = () => {
+      reject(new Error('Failed to read file as data URL'));
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
 export async function uploadDocument(
   file: File,
   metadata: Omit<DocumentMetadata, 'id' | 'fileType' | 'fileSize' | 'uploadedAt'>
 ): Promise<DocumentRecord> {
   const content = await extractFileContent(file);
+  const fileDataUrl = await readFileAsDataUrl(file);
 
   const docId = uuidv4();
   const extension = '.' + file.name.split('.').pop()?.toLowerCase();
@@ -80,6 +94,7 @@ export async function uploadDocument(
     id: docId,
     metadata: fullMetadata,
     content,
+    fileDataUrl,
     embedding: generateMockEmbedding(),
   };
 

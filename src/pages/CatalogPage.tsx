@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Search, FileText, User, Calendar, Tag, ChevronDown, ChevronUp, Hash } from 'lucide-react';
 import { DocumentRecord } from '../types';
 import { getAllDocuments, searchDocuments } from '../services/documentService';
+import ContentViewer from '../components/ContentViewer';
 
 export default function CatalogPage() {
   const [documents, setDocuments] = useState<DocumentRecord[]>([]);
@@ -122,12 +123,7 @@ export default function CatalogPage() {
                   <div className="border-t border-gray-100">
                     {/* Content Section */}
                     <div className="p-5 bg-gray-50">
-                      <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
-                        Document Content
-                      </h4>
-                      <pre className="text-sm text-gray-700 whitespace-pre-wrap font-mono bg-white p-4 rounded-lg border border-gray-200 max-h-64 overflow-y-auto">
-                        {doc.content}
-                      </pre>
+                      <ContentViewer document={doc} />
                     </div>
 
                     {/* Embedding Section */}

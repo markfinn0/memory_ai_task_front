@@ -14,6 +14,7 @@ export interface DocumentRecord {
   id: string;
   metadata: DocumentMetadata;
   content: string;
+  fileDataUrl?: string;
   embedding: EmbeddingInfo;
 }
 
