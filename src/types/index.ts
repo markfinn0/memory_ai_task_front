@@ -41,6 +41,7 @@ export interface MessageSource {
   confidence?: number;
   originalChatId?: string;
   documentsUsed?: string[];
+  cached?: boolean;
 }
 
 export interface ChatSession {

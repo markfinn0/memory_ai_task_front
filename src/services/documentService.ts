@@ -54,11 +54,15 @@ export async function uploadDocument(
   });
 
   // Step 2: Upload the file directly to S3 using the presigned URL
-  await fetch(uploadInfo.uploadUrl, {
+  const s3Response = await fetch(uploadInfo.uploadUrl, {
     method: 'PUT',
     headers: { 'Content-Type': uploadInfo.contentType },
     body: file,
   });
+
+  if (!s3Response.ok) {
+    throw new Error(`File upload to S3 failed (status ${s3Response.status}). Please try again.`);
+  }
 
   // Step 3: Create the document record in DynamoDB (with S3 reference)
   const docData: Record<string, unknown> = {
