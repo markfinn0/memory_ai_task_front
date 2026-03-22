@@ -1,25 +1,5 @@
-import { v4 as uuidv4 } from 'uuid';
-import { DocumentRecord, DocumentMetadata, EmbeddingInfo, ALLOWED_FILE_TYPES, BLOCKED_FILE_TYPES } from '../types';
-import { MOCK_DOCUMENTS } from './mockData';
-
-const STORAGE_KEY = 'memory_ai_documents';
-
-function getStoredDocuments(): DocumentRecord[] {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      return JSON.parse(stored) as DocumentRecord[];
-    }
-  } catch {
-    // If parsing fails, start fresh
-  }
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(MOCK_DOCUMENTS));
-  return [...MOCK_DOCUMENTS];
-}
-
-function saveDocuments(docs: DocumentRecord[]): void {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(docs));
-}
+import { DocumentRecord, DocumentMetadata, ALLOWED_FILE_TYPES, BLOCKED_FILE_TYPES } from '../types';
+import { apiCall } from './api';
 
 export function validateFileType(fileName: string): { valid: boolean; message: string } {
   const extension = '.' + fileName.split('.').pop()?.toLowerCase();
@@ -33,16 +13,6 @@ export function validateFileType(fileName: string): { valid: boolean; message: s
   }
 
   return { valid: true, message: '' };
-}
-
-function generateMockEmbedding(): EmbeddingInfo {
-  return {
-    model: 'text-embedding-ada-002',
-    dimensions: 1536,
-    vector: Array.from({ length: 10 }, () => parseFloat((Math.random() * 2 - 1).toFixed(6))),
-    tokenCount: Math.floor(Math.random() * 300) + 50,
-    createdAt: new Date().toISOString(),
-  };
 }
 
 function extractFileContent(file: File): Promise<string> {
@@ -72,60 +42,58 @@ function readFileAsDataUrl(file: File): Promise<string> {
   });
 }
 
+interface UploadResponse {
+  message: string;
+  document: DocumentRecord;
+}
+
 export async function uploadDocument(
   file: File,
   metadata: Omit<DocumentMetadata, 'id' | 'fileType' | 'fileSize' | 'uploadedAt'>
 ): Promise<DocumentRecord> {
   const content = await extractFileContent(file);
   const fileDataUrl = await readFileAsDataUrl(file);
-
-  const docId = uuidv4();
   const extension = '.' + file.name.split('.').pop()?.toLowerCase();
 
-  const fullMetadata: DocumentMetadata = {
-    ...metadata,
-    id: docId,
+  const result = await apiCall<UploadResponse>('upload_document', {
+    fileName: metadata.fileName,
     fileType: extension,
     fileSize: file.size,
-    uploadedAt: new Date().toISOString(),
-  };
-
-  const record: DocumentRecord = {
-    id: docId,
-    metadata: fullMetadata,
+    author: metadata.author,
+    context: metadata.context,
+    tags: metadata.tags,
+    uploadedBy: metadata.uploadedBy,
     content,
     fileDataUrl,
-    embedding: generateMockEmbedding(),
-  };
+  });
 
-  // Simulate network delay
-  await new Promise((resolve) => setTimeout(resolve, 1500));
-
-  const docs = getStoredDocuments();
-  docs.unshift(record);
-  saveDocuments(docs);
-
-  return record;
+  return result.document;
 }
 
-export function getAllDocuments(): DocumentRecord[] {
-  return getStoredDocuments();
+interface GetDocumentsResponse {
+  documents: DocumentRecord[];
+  count: number;
 }
 
-export function getDocumentById(id: string): DocumentRecord | undefined {
-  const docs = getStoredDocuments();
-  return docs.find((d) => d.id === id);
+export async function getAllDocuments(): Promise<DocumentRecord[]> {
+  const result = await apiCall<GetDocumentsResponse>('get_documents');
+  return result.documents;
 }
 
-export function searchDocuments(query: string): DocumentRecord[] {
-  const docs = getStoredDocuments();
-  const lower = query.toLowerCase();
-  return docs.filter(
-    (d) =>
-      d.metadata.fileName.toLowerCase().includes(lower) ||
-      d.metadata.author.toLowerCase().includes(lower) ||
-      d.metadata.context.toLowerCase().includes(lower) ||
-      d.metadata.tags.some((t) => t.toLowerCase().includes(lower)) ||
-      d.content.toLowerCase().includes(lower)
-  );
+interface GetDocumentResponse {
+  document: DocumentRecord;
+}
+
+export async function getDocumentById(id: string): Promise<DocumentRecord | undefined> {
+  try {
+    const result = await apiCall<GetDocumentResponse>('get_document', { documentId: id });
+    return result.document;
+  } catch {
+    return undefined;
+  }
+}
+
+export async function searchDocuments(query: string): Promise<DocumentRecord[]> {
+  const result = await apiCall<GetDocumentsResponse>('search_documents', { query });
+  return result.documents;
 }

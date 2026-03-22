@@ -8,16 +8,29 @@ export default function CatalogPage() {
   const [documents, setDocuments] = useState<DocumentRecord[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setDocuments(getAllDocuments());
+    setLoading(true);
+    getAllDocuments()
+      .then(setDocuments)
+      .catch(() => setDocuments([]))
+      .finally(() => setLoading(false));
   }, []);
 
   useEffect(() => {
     if (searchQuery.trim()) {
-      setDocuments(searchDocuments(searchQuery));
+      setLoading(true);
+      searchDocuments(searchQuery)
+        .then(setDocuments)
+        .catch(() => setDocuments([]))
+        .finally(() => setLoading(false));
     } else {
-      setDocuments(getAllDocuments());
+      setLoading(true);
+      getAllDocuments()
+        .then(setDocuments)
+        .catch(() => setDocuments([]))
+        .finally(() => setLoading(false));
     }
   }, [searchQuery]);
 
@@ -60,7 +73,12 @@ export default function CatalogPage() {
       </p>
 
       {/* Document Cards */}
-      {documents.length === 0 ? (
+      {loading ? (
+        <div className="text-center py-16">
+          <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-gray-500 text-sm">Loading documents...</p>
+        </div>
+      ) : documents.length === 0 ? (
         <div className="text-center py-16">
           <FileText size={48} className="mx-auto text-gray-300 mb-4" />
           <p className="text-gray-500 font-medium">No documents found</p>

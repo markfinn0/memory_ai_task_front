@@ -48,6 +48,7 @@ export interface ChatSession {
   createdBy: string;
   authorToken: string;
   messages: ChatMessage[];
+  messageCount?: number;
   isPublic: boolean;
 }
 
