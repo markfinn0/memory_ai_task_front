@@ -37,7 +37,7 @@ export interface ChatMessage {
 }
 
 export interface MessageSource {
-  type: 'reused' | 'new';
+  type: 'reused' | 'new' | 'elasticsearch';
   confidence?: number;
   originalChatId?: string;
   documentsUsed?: string[];

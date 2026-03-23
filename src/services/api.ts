@@ -14,7 +14,8 @@ function normalizeRecord(obj: any): any {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const result: any = {};
     for (const [key, value] of Object.entries(obj)) {
-      if (key === 'ID' && !('id' in obj)) {
+      if (key === 'ID') {
+        // Always map DynamoDB partition key 'ID' to lowercase 'id'
         result['id'] = value;
       } else if (key === 'record_type') {
         continue; // skip internal DynamoDB field

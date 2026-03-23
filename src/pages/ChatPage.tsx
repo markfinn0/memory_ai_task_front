@@ -192,17 +192,7 @@ export default function ChatPage() {
                   </span>
                   {msg.source && <SourceBadge source={msg.source} />}
                 </div>
-                {msg.source?.cached && (
-                  <p className="text-[10px] mt-1 opacity-60">
-                    Retrieved from cache (saved tokens)
-                  </p>
-                )}
-                {msg.source?.type === 'reused' && !msg.source.cached && msg.source.originalChatId && (
-                  <p className="text-[10px] mt-1 opacity-60">
-                    From previous conversation
-                  </p>
-                )}
-                {msg.source?.documentsUsed && msg.source.documentsUsed.length > 0 && (
+                {msg.source?.type === 'new' && msg.source?.documentsUsed && msg.source.documentsUsed.length > 0 && (
                   <p className="text-[10px] mt-1 opacity-60">
                     Sources: {msg.source.documentsUsed.length} document{msg.source.documentsUsed.length !== 1 ? 's' : ''} used
                   </p>
